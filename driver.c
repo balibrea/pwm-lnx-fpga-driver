@@ -74,6 +74,22 @@ static struct platform_driver pwm_platform_driver = {
   },
 };
 
+// ASCII to NUM
+unsigned int ascii_to_num(uint8_t data[10]){
+    int d[4];
+    int i;
+
+    for(i = 0; i< 4; i++){
+        
+        if(data[i] < 0x30 || data[i] > 0x39){
+            d[i] = 0;
+        }else{
+            d[i] = data[i] - 0x30;
+        }
+    }
+    return d[3] + d[2] * 10 +d[1] * 100 + d[0] * 1000;
+}
+
 // Probe
 static int pwm_dev_probe(struct platform_device *pdev){
 
@@ -94,7 +110,7 @@ static int pwm_dev_probe(struct platform_device *pdev){
 		dev_err(&pdev->dev, "could not remap memory\n");
 		return -1;
 	}
-	printk("pwm_hw_base:%d, virtual address: %p\n", regs->start, pwm_base);
+	printk("regs->start: %d, regs->end: %d, virt_mem_start: %p\n", regs->start, regs->end, pwm_base);
 
 
   return 0;
@@ -102,6 +118,7 @@ static int pwm_dev_probe(struct platform_device *pdev){
 
 // Remove
 static int pwm_dev_remove(struct platform_device *pdev){
+  iounmap((void*)pwm_base);
   return 0;
 }
 
@@ -129,18 +146,18 @@ static int pwm_release(struct inode *inode, struct file *file)
 static ssize_t pwm_read(struct file *filp,
                 char __user *buf, size_t len, loff_t *off)
 {
-  uint8_t gpio_state = 0;
+  uint8_t pwm_state = 0;
 
-  //reading GPIO value
-  
+  //reading PWM DC value
+  // TODO pwmC3 ...
 
   //write to user
   len = 1;
-  if( copy_to_user(buf, &gpio_state, len) > 0) {
+  if( copy_to_user(buf, &pwm_state, len) > 0) {
     pr_err("ERROR: Not all the bytes have been copied to user\n");
   }
 
-  pr_info("Read function : PWM_Duty_Cycle = %d \n", gpio_state);
+  pr_info("Read function : PWM_Duty_Cycle = %d \n", pwm_state);
 
   return 0;
 }
@@ -153,13 +170,17 @@ static ssize_t pwm_write(struct file *filp,
 {
   uint8_t rec_buf[10] = {0};
 
+  unsigned int duty = 0; 
+
   if( copy_from_user( rec_buf, buf, len ) > 0) {
     pr_err("ERROR: Not all the bytes have been copied from user\n");
   }
 
+  duty = ascii_to_num(rec_buf);
+
   pr_info("Write Function : PWM_Duty_Cycle Set = %c\n", rec_buf[0]);
 
-  //*pwm_base = rec_buf[0];
+  iowrite32((u32)rec_buf[0], pwm_base);
 
   return len;
 }
