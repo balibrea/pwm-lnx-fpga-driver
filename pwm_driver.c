@@ -77,21 +77,6 @@ static struct platform_driver pwm_platform_driver = {
   },
 };
 
-// ASCII to NUM
-unsigned int ascii_to_num(uint8_t data[10]){
-    int d[4];
-    int i;
-
-    for(i = 0; i< 4; i++){
-        
-        if(data[i] < 0x30 || data[i] > 0x39){
-            d[i] = 0;
-        }else{
-            d[i] = data[i] - 0x30;
-        }
-    }
-    return d[3] + d[2] * 10 +d[1] * 100 + d[0] * 1000;
-}
 
 // Probe
 static int pwm_dev_probe(struct platform_device *pdev){
@@ -193,7 +178,8 @@ static ssize_t pwm_write(struct file *filp,
     pr_err("ERROR: Not all the bytes have been copied from user\n");
   }
 
-  duty = ascii_to_num(rec_buf);
+  //Scan an integer number from the buffer
+  sscanf(rec_buf, "%d", &duty);
 
 #ifdef DEV_DEBUG
   pr_info("Write Function : PWM_Duty_Cycle Set = %d\n", duty);
